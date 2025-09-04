@@ -80,7 +80,7 @@ const MedicationsScreen: React.FC = () => {
          {(medications.length > 0 || supplements.length > 0) && (
            <View style={styles.dailyTrackingSection}>
              <Text style={[styles.sectionTitle, TEXT_STYLES.h3, styles.dailyTrackingTitle]}>
-               Günlük Takip
+               İlaç & Takviye Günlük Takip
              </Text>
              <View style={styles.itemsList}>
                {medications.map((medication) => {

@@ -280,4 +280,55 @@ export interface DailyHealthData {
   medications: DailyMedication[];
   supplements: DailySupplement[];
   lastUpdate?: string;
+}
+
+// Modül Yönetimi
+export interface Module {
+  id: string;
+  name: string;
+  displayName: string;
+  icon: string;
+  color: string;
+  isDefault: boolean;
+  isEnabled: boolean;
+  order: number;
+  description: string;
+  screenName: keyof RootStackParamList;
+}
+
+export interface ModuleSettings {
+  enabledModules: string[]; // Module ID'leri
+  moduleOrder: string[]; // Module ID'leri sıralı
+  lastUpdate: string;
+}
+
+// Pomodoro Modülü
+export interface PomodoroSession {
+  id: string;
+  type: 'work' | 'shortBreak' | 'longBreak';
+  duration: number; // dakika cinsinden
+  isCompleted: boolean;
+  startTime?: Date;
+  endTime?: Date;
+  createdAt: Date;
+}
+
+export interface PomodoroSettings {
+  workDuration: number; // dakika
+  shortBreakDuration: number; // dakika
+  longBreakDuration: number; // dakika
+  longBreakInterval: number; // kaç pomodoro sonra uzun mola
+  autoStartBreaks: boolean;
+  autoStartPomodoros: boolean;
+  soundEnabled: boolean;
+  lastUpdate: string;
+}
+
+export interface PomodoroData {
+  date: string;
+  sessions: PomodoroSession[];
+  completedPomodoros: number;
+  totalWorkTime: number; // dakika
+  totalBreakTime: number; // dakika
+  lastUpdate: string;
 } 

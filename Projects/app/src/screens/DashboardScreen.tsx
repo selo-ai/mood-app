@@ -34,14 +34,21 @@ import {
   Star,
   Moon,
   ShoppingBag,
-  Calendar
+  Calendar,
+  Settings
 } from 'react-native-feather';
 
 type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
 
 const DashboardScreen: React.FC = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
-  const { addTask, addMistake, addMoodEntry, getCurrentDailyRecord } = useAppStore();
+  const { 
+    addTask, 
+    addMistake, 
+    addMoodEntry, 
+    getCurrentDailyRecord,
+    getEnabledModules 
+  } = useAppStore();
   
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showMistakeModal, setShowMistakeModal] = useState(false);
@@ -103,6 +110,23 @@ const DashboardScreen: React.FC = () => {
     setShowToast(true);
   };
 
+  const getModuleIcon = (iconName: string, color: string) => {
+    switch (iconName) {
+      case 'Home': return <Home width={32} height={32} color={color} />;
+      case 'List': return <List width={32} height={32} color={color} />;
+      case 'AlertTriangle': return <AlertTriangle width={32} height={32} color={color} />;
+      case 'Heart': return <Heart width={32} height={32} color={color} />;
+      case 'FileText': return <FileText width={32} height={32} color={color} />;
+      case 'Coffee': return <Coffee width={32} height={32} color={color} />;
+      case 'BookOpen': return <BookOpen width={32} height={32} color={color} />;
+      case 'Moon': return <Moon width={32} height={32} color={color} />;
+      case 'ShoppingBag': return <ShoppingBag width={32} height={32} color={color} />;
+      case 'Calendar': return <Calendar width={32} height={32} color={color} />;
+      case 'Clock': return <Clock width={32} height={32} color={color} />;
+      default: return <Settings width={32} height={32} color={color} />;
+    }
+  };
+
   const handleCategoryPress = (categoryId: string) => {
     if (categoryId === 'Günlük Rutinler') {
       navigation.navigate('DailyRoutines');
@@ -118,18 +142,19 @@ const DashboardScreen: React.FC = () => {
       navigation.navigate('Books');
     } else if (categoryId === 'Beslenme') {
       navigation.navigate('Nutrition');
-      } else if (categoryId === 'İbadet') {
-    navigation.navigate('Prayer');
-  } else if (categoryId === 'Alışveriş') {
-    navigation.navigate('Shopping');
-  } else if (categoryId === 'Özel Günler') {
-    navigation.navigate('SpecialDays');
-  } else if (categoryId === 'Modül Ekle') {
-    // TODO: Modül yönetim sayfasına git
-    Alert.alert('Modül Yönetimi', 'Modül yönetim sayfası yakında eklenecek!');
-  } else {
-    Alert.alert('Kategori', `${categoryId} sayfasına gidilecek`);
-  }
+    } else if (categoryId === 'İbadet') {
+      navigation.navigate('Prayer');
+    } else if (categoryId === 'Alışveriş') {
+      navigation.navigate('Shopping');
+    } else if (categoryId === 'Özel Günler') {
+      navigation.navigate('SpecialDays');
+    } else if (categoryId === 'Pomodoro') {
+      navigation.navigate('Pomodoro');
+    } else if (categoryId === 'Modül Ekle') {
+      navigation.navigate('ModuleManagement');
+    } else {
+      Alert.alert('Kategori', `${categoryId} sayfasına gidilecek`);
+    }
   };
 
   return (
@@ -154,27 +179,6 @@ const DashboardScreen: React.FC = () => {
               day: 'numeric',
             })}
           </Text>
-        </View>
-
-        {/* Score Card */}
-        <View style={styles.scoreCard}>
-          <View style={styles.scoreHeader}>
-            <Text style={[styles.scoreTitle, TEXT_STYLES.subtitle]}>Bugünkü Puanın</Text>
-            <Text style={[styles.scoreValue, TEXT_STYLES.score]}>0/100</Text>
-          </View>
-          
-          <View style={styles.scoreDetails}>
-            <View style={styles.starsContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Text key={star} style={styles.starText}>☆</Text>
-              ))}
-            </View>
-            <View style={styles.moodContainer}>
-              <Smile width={32} height={32} color={COLORS.neutral[600]} />
-            </View>
-          </View>
-
-          <Text style={[styles.motivationText, TEXT_STYLES.body]}>Bugün zor bir gündü. Kendine nazik ol!</Text>
         </View>
 
         {/* Stats Row */}
@@ -233,110 +237,21 @@ const DashboardScreen: React.FC = () => {
 
         {/* Categories */}
         <View style={styles.categories}>
-          <Text style={[styles.sectionTitle, TEXT_STYLES.h3]}>Kategoriler</Text>
+          <Text style={[styles.sectionTitle, TEXT_STYLES.h3]}>Modüller</Text>
           
           <View style={styles.categoryGrid}>
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.primary[50] }]}
-              onPress={() => handleCategoryPress('Günlük Rutinler')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <Home width={32} height={32} color={COLORS.primary[500]} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>Günlük Rutinler</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.primary[100] }]}
-              onPress={() => handleCategoryPress('Görevler')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <List width={32} height={32} color={COLORS.primary[600]} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>Görevler</Text>
-            </TouchableOpacity>
-            
-                                  <TouchableOpacity
-                        style={[styles.categoryCard, { backgroundColor: COLORS.status.error + '20' }]}
-                        onPress={() => handleCategoryPress('Hata Takibi')}
-                      >
-                        <View style={styles.categoryIconContainer}>
-                          <AlertTriangle width={32} height={32} color={COLORS.status.error} />
-                        </View>
-                        <Text style={[styles.categoryName, TEXT_STYLES.body]}>Hata Takibi</Text>
-                      </TouchableOpacity>
-
-
-            
-                         <TouchableOpacity
-               style={[styles.categoryCard, { backgroundColor: COLORS.status.warning + '20' }]}
-               onPress={() => handleCategoryPress('Sağlık')}
-             >
-               <View style={styles.categoryIconContainer}>
-                 <Heart width={32} height={32} color={COLORS.status.warning} />
-               </View>
-               <Text style={[styles.categoryName, TEXT_STYLES.body]}>Sağlık</Text>
-             </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.status.info + '20' }]}
-              onPress={() => handleCategoryPress('Notlar')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <FileText width={32} height={32} color={COLORS.status.info} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>Notlar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.status.success + '20' }]}
-              onPress={() => handleCategoryPress('Beslenme')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <Coffee width={32} height={32} color={COLORS.status.success} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>Beslenme</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.neutral[200] }]}
-              onPress={() => handleCategoryPress('Kitap Oku')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <BookOpen width={32} height={32} color={COLORS.neutral[600]} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>Kitap Oku</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.primary[200] }]}
-              onPress={() => handleCategoryPress('İbadet')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <Moon width={32} height={32} color={COLORS.primary[700]} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>İbadet</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.status.info + '30' }]}
-              onPress={() => handleCategoryPress('Alışveriş')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <ShoppingBag width={32} height={32} color={COLORS.status.info} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>Alışveriş</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.categoryCard, { backgroundColor: COLORS.status.warning + '20' }]}
-              onPress={() => handleCategoryPress('Özel Günler')}
-            >
-              <View style={styles.categoryIconContainer}>
-                <Calendar width={32} height={32} color={COLORS.status.warning} />
-              </View>
-              <Text style={[styles.categoryName, TEXT_STYLES.body]}>Özel Günler</Text>
-            </TouchableOpacity>
+            {getEnabledModules().map((module) => (
+              <TouchableOpacity
+                key={module.id}
+                style={[styles.categoryCard, { backgroundColor: module.color + '20' }]}
+                onPress={() => handleCategoryPress(module.displayName)}
+              >
+                <View style={styles.categoryIconContainer}>
+                  {getModuleIcon(module.icon, module.color)}
+                </View>
+                <Text style={[styles.categoryName, TEXT_STYLES.body]}>{module.displayName}</Text>
+              </TouchableOpacity>
+            ))}
             
             <TouchableOpacity
               style={[styles.categoryCard, { backgroundColor: COLORS.primary[100] }]}
@@ -414,49 +329,6 @@ const styles = StyleSheet.create({
   dateText: {
     color: COLORS.text.secondary,
     textTransform: 'capitalize',
-  },
-  scoreCard: {
-    backgroundColor: COLORS.background.card,
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
-    shadowColor: COLORS.shadow.medium,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  scoreHeader: {
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  scoreTitle: {
-    color: COLORS.text.secondary,
-    marginBottom: SPACING.sm,
-  },
-  scoreValue: {
-    color: COLORS.primary[500],
-  },
-  scoreDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-  },
-  starText: {
-    fontSize: 24,
-    color: COLORS.neutral[400],
-  },
-  moodContainer: {
-    alignItems: 'center',
-  },
-  motivationText: {
-    color: COLORS.text.secondary,
-    textAlign: 'center',
-    fontStyle: 'italic',
   },
   statsRow: {
     flexDirection: 'row',

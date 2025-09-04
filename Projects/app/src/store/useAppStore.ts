@@ -29,10 +29,16 @@ import {
   SpecialDay,
   DailyHealthData,
   DailyMedication,
-  DailySupplement
+  DailySupplement,
+  Module,
+  ModuleSettings,
+  PomodoroData,
+  PomodoroSettings,
+  PomodoroSession
 } from '../types';
 import { calculateDailyScore } from '../utils/scoreCalculator';
 import { DEFAULT_CATEGORIES } from '../constants/categories';
+import { DEFAULT_MODULES } from '../constants/modules';
 
 interface AppState {
   // Kullanıcı bilgileri
@@ -50,6 +56,9 @@ interface AppState {
   
   // Aktif odaklanma seansı
   activeFocusSession: FocusSession | null;
+  
+  // Aktif Pomodoro seansı
+  activePomodoroSession: PomodoroSession | null;
   
   // Beslenme modülü
   nutritionData: Record<string, NutritionData>;
@@ -73,6 +82,17 @@ interface AppState {
   
   // Alışveriş modülü
   shoppingLists: ShoppingList[];
+  
+  // Özel Günler modülü
+  specialDays: SpecialDay[];
+  
+  // Pomodoro modülü
+  pomodoroData: Record<string, PomodoroData>;
+  pomodoroSettings: PomodoroSettings;
+  
+  // Modül Yönetimi
+  modules: Module[];
+  moduleSettings: ModuleSettings;
   
   // Actions
   setUser: (user: User) => void;
@@ -181,6 +201,16 @@ interface AppState {
   toggleDailySupplement: (supplementId: string) => void;
   getCurrentDailyHealthData: () => DailyHealthData;
   getDailyHealthData: (date: string) => DailyHealthData | null;
+  
+  // Pomodoro modülü action'ları
+  startPomodoroSession: (type: 'work' | 'shortBreak' | 'longBreak') => void;
+  pausePomodoroSession: () => void;
+  resumePomodoroSession: () => void;
+  completePomodoroSession: () => void;
+  skipPomodoroSession: () => void;
+  updatePomodoroSettings: (settings: Partial<PomodoroSettings>) => void;
+  getCurrentPomodoroData: () => PomodoroData;
+  getPomodoroData: (date: string) => PomodoroData | null;
 }
 
 const getTodayString = (): string => {
@@ -251,6 +281,15 @@ const DEFAULT_NUTRITION_SETTINGS: NutritionSettings = {
   },
 };
 
+const createEmptyPomodoroData = (date: string): PomodoroData => ({
+  date,
+  sessions: [],
+  completedPomodoros: 0,
+  totalWorkTime: 0,
+  totalBreakTime: 0,
+  lastUpdate: new Date().toISOString(),
+});
+
 // Tarih string'lerini Date objelerine çeviren helper fonksiyon
 const parseDates = (data: any): any => {
   if (typeof data !== 'object' || data === null) return data;
@@ -284,8 +323,9 @@ export const useAppStore = create<AppState>()(
       activeCategories: DEFAULT_CATEGORIES,
       currentDate: getTodayString(),
       dailyRecords: {},
-      dailyRoutines: [],
-      activeFocusSession: null,
+              dailyRoutines: [],
+        activeFocusSession: null,
+        activePomodoroSession: null,
              nutritionData: {},
        nutritionSettings: DEFAULT_NUTRITION_SETTINGS,
        notes: [],
@@ -298,6 +338,23 @@ export const useAppStore = create<AppState>()(
         shoppingLists: [],
         specialDays: [],
         dailyHealthData: {},
+        pomodoroData: {},
+        pomodoroSettings: {
+          workDuration: 25,
+          shortBreakDuration: 5,
+          longBreakDuration: 15,
+          longBreakInterval: 4,
+          autoStartBreaks: false,
+          autoStartPomodoros: false,
+          soundEnabled: true,
+          lastUpdate: new Date().toISOString()
+        },
+        modules: DEFAULT_MODULES,
+        moduleSettings: {
+          enabledModules: DEFAULT_MODULES.filter(m => m.isDefault).map(m => m.id),
+          moduleOrder: DEFAULT_MODULES.map(m => m.id),
+          lastUpdate: new Date().toISOString()
+        },
 
       // User actions
       setUser: (user: User) => set({ user }),
@@ -1558,6 +1615,204 @@ export const useAppStore = create<AppState>()(
            const state = get();
            return state.dailyHealthData[date] || null;
          },
+
+         // Modül Yönetimi Action'ları
+         toggleModule: (moduleId: string) => {
+           const state = get();
+           const module = state.modules.find(m => m.id === moduleId);
+           if (!module) return;
+
+           // En az 1 modül aktif olmalı
+           const enabledModules = state.moduleSettings.enabledModules;
+           if (module.isEnabled && enabledModules.length <= 1) {
+             return; // Son modülü kapatmaya izin verme
+           }
+
+           const updatedModules = state.modules.map(m =>
+             m.id === moduleId ? { ...m, isEnabled: !m.isEnabled } : m
+           );
+
+           const updatedEnabledModules = module.isEnabled
+             ? enabledModules.filter(id => id !== moduleId)
+             : [...enabledModules, moduleId];
+
+           set(state => ({
+             modules: updatedModules,
+             moduleSettings: {
+               ...state.moduleSettings,
+               enabledModules: updatedEnabledModules,
+               lastUpdate: new Date().toISOString()
+             }
+           }));
+         },
+
+         reorderModules: (moduleOrder: string[]) => {
+           set(state => ({
+             modules: state.modules.map(module => ({
+               ...module,
+               order: moduleOrder.indexOf(module.id)
+             })).sort((a, b) => a.order - b.order),
+             moduleSettings: {
+               ...state.moduleSettings,
+               moduleOrder,
+               lastUpdate: new Date().toISOString()
+             }
+           }));
+         },
+
+         getEnabledModules: () => {
+           const state = get();
+           return state.modules
+             .filter(module => module.isEnabled)
+             .sort((a, b) => a.order - b.order);
+         },
+
+                   getAvailableModules: () => {
+            const state = get();
+            return state.modules.sort((a, b) => a.order - b.order);
+          },
+
+          // Pomodoro modülü action'ları
+          startPomodoroSession: (type: 'work' | 'shortBreak' | 'longBreak') => {
+            const state = get();
+            const settings = state.pomodoroSettings;
+            
+            let duration: number;
+            switch (type) {
+              case 'work':
+                duration = settings.workDuration;
+                break;
+              case 'shortBreak':
+                duration = settings.shortBreakDuration;
+                break;
+              case 'longBreak':
+                duration = settings.longBreakDuration;
+                break;
+            }
+
+            const session: PomodoroSession = {
+              id: Date.now().toString(),
+              type,
+              duration,
+              isCompleted: false,
+              startTime: new Date(),
+              createdAt: new Date(),
+            };
+
+            set({ activePomodoroSession: session });
+          },
+
+          pausePomodoroSession: () => {
+            const state = get();
+            const activeSession = state.activePomodoroSession;
+            if (activeSession && activeSession.startTime) {
+              const pausedSession = {
+                ...activeSession,
+                endTime: new Date(),
+              };
+              set({ activePomodoroSession: pausedSession });
+            }
+          },
+
+          resumePomodoroSession: () => {
+            const state = get();
+            const activeSession = state.activePomodoroSession;
+            if (activeSession && activeSession.endTime) {
+              // Duraklatılmış süreyi hesaba kat
+              const pauseDuration = new Date().getTime() - new Date(activeSession.endTime).getTime();
+              const originalStartTime = new Date(activeSession.startTime).getTime();
+              const adjustedStartTime = new Date(originalStartTime + pauseDuration);
+              
+              const resumedSession = {
+                ...activeSession,
+                startTime: adjustedStartTime,
+                endTime: undefined,
+              };
+              set({ activePomodoroSession: resumedSession });
+            }
+          },
+
+          completePomodoroSession: () => {
+            const state = get();
+            const activeSession = state.activePomodoroSession;
+            if (activeSession) {
+              const completedSession = {
+                ...activeSession,
+                isCompleted: true,
+                endTime: new Date(),
+              };
+
+              const currentData = state.getCurrentPomodoroData();
+              const updatedSessions = [...currentData.sessions, completedSession];
+              
+              let updatedCompletedPomodoros = currentData.completedPomodoros;
+              let updatedTotalWorkTime = currentData.totalWorkTime;
+              let updatedTotalBreakTime = currentData.totalBreakTime;
+
+              if (activeSession.type === 'work') {
+                updatedCompletedPomodoros += 1;
+                updatedTotalWorkTime += activeSession.duration;
+              } else {
+                updatedTotalBreakTime += activeSession.duration;
+              }
+
+              const updatedData = {
+                ...currentData,
+                sessions: updatedSessions,
+                completedPomodoros: updatedCompletedPomodoros,
+                totalWorkTime: updatedTotalWorkTime,
+                totalBreakTime: updatedTotalBreakTime,
+                lastUpdate: new Date().toISOString(),
+              };
+
+              set(state => ({
+                activePomodoroSession: null,
+                pomodoroData: {
+                  ...state.pomodoroData,
+                  [state.currentDate]: updatedData,
+                },
+              }));
+            }
+          },
+
+          skipPomodoroSession: () => {
+            set({ activePomodoroSession: null });
+          },
+
+          updatePomodoroSettings: (settings: Partial<PomodoroSettings>) => {
+            set(state => ({
+              pomodoroSettings: {
+                ...state.pomodoroSettings,
+                ...settings,
+                lastUpdate: new Date().toISOString(),
+              },
+            }));
+          },
+
+          getCurrentPomodoroData: () => {
+            const state = get();
+            const currentData = state.pomodoroData[state.currentDate];
+            
+            if (!currentData) {
+              const newData = createEmptyPomodoroData(state.currentDate);
+              setTimeout(() => {
+                set(state => ({
+                  pomodoroData: {
+                    ...state.pomodoroData,
+                    [state.currentDate]: newData,
+                  },
+                }));
+              }, 0);
+              return newData;
+            }
+            
+            return currentData;
+          },
+
+          getPomodoroData: (date: string) => {
+            const state = get();
+            return state.pomodoroData[date] || null;
+          },
     }),
     {
       name: 'my-mood-storage',
@@ -1576,8 +1831,12 @@ export const useAppStore = create<AppState>()(
                            supplements: state.supplements,
           routines: state.routines,
           prayerData: state.prayerData,
-          shoppingLists: state.shoppingLists,
+                    shoppingLists: state.shoppingLists,
           dailyHealthData: state.dailyHealthData,
+          pomodoroData: state.pomodoroData,
+          pomodoroSettings: state.pomodoroSettings,
+          modules: state.modules,
+          moduleSettings: state.moduleSettings,
       }),
              onRehydrateStorage: () => (state) => {
          if (state) {
@@ -1600,10 +1859,15 @@ export const useAppStore = create<AppState>()(
              state.prayerData[date] = parseDates(state.prayerData[date]);
            });
            
-           // Daily health data içindeki tarihleri de çevir
-           Object.keys(state.dailyHealthData).forEach(date => {
-             state.dailyHealthData[date] = parseDates(state.dailyHealthData[date]);
-           });
+                       // Daily health data içindeki tarihleri de çevir
+            Object.keys(state.dailyHealthData).forEach(date => {
+              state.dailyHealthData[date] = parseDates(state.dailyHealthData[date]);
+            });
+            
+            // Pomodoro data içindeki tarihleri de çevir
+            Object.keys(state.pomodoroData).forEach(date => {
+              state.pomodoroData[date] = parseDates(state.pomodoroData[date]);
+            });
          }
        },
     }

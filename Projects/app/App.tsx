@@ -17,6 +17,8 @@ import MistakesScreen from './src/screens/MistakesScreen';
 import PrayerScreen from './src/screens/PrayerScreen';
 import ShoppingScreen from './src/screens/ShoppingScreen';
 import SpecialDaysScreen from './src/screens/SpecialDaysScreen';
+import PomodoroScreen from './src/screens/PomodoroScreen';
+import ModuleManagementScreen from './src/screens/ModuleManagementScreen';
 
 
 
@@ -35,6 +37,8 @@ export type RootStackParamList = {
   Prayer: undefined;
   Shopping: undefined;
   SpecialDays: undefined;
+  ModuleManagement: undefined;
+  Pomodoro: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -62,7 +66,9 @@ export default function App() {
           <Stack.Screen name="Mistakes" component={MistakesScreen} />
           <Stack.Screen name="Prayer" component={PrayerScreen} />
           <Stack.Screen name="Shopping" component={ShoppingScreen} />
-          <Stack.Screen name="SpecialDays" component={SpecialDaysScreen} />
+                  <Stack.Screen name="SpecialDays" component={SpecialDaysScreen} />
+        <Stack.Screen name="Pomodoro" component={PomodoroScreen} />
+        <Stack.Screen name="ModuleManagement" component={ModuleManagementScreen} />
 
         </Stack.Navigator>
         <StatusBar style="dark" />

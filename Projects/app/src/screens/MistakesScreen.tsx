@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -23,56 +23,19 @@ import { useAppStore } from '../store/useAppStore';
 import Toast from '../components/Toast';
 import { Mistake } from '../types';
 import AddMistakeModal from '../components/AddMistakeModal';
-import DateChartView from '../components/DateChartView';
 
 type MistakesScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Mistakes'>;
 
 const MistakesScreen: React.FC = () => {
   const navigation = useNavigation<MistakesScreenNavigationProp>();
-  const { getCurrentDailyRecord, deleteMistake, addMistake, dailyRecords } = useAppStore();
+  const { getCurrentDailyRecord, deleteMistake, addMistake } = useAppStore();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    try {
-      return new Date().toISOString().split('T')[0];
-    } catch (error) {
-      console.warn('Date initialization error:', error);
-      return '2024-01-01'; // fallback date
-    }
-  });
 
   const currentRecord = getCurrentDailyRecord();
   const mistakes = currentRecord.mistakes;
-
-  // Son 7 günün hata verilerini hesapla
-  const chartData = useMemo(() => {
-    const data = [];
-    const today = new Date();
-    
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      let dateString;
-      try {
-        dateString = date.toISOString().split('T')[0];
-      } catch (error) {
-        console.warn('Date string conversion error:', error);
-        dateString = '2024-01-01'; // fallback
-      }
-      
-      const record = dailyRecords[dateString];
-      const mistakeCount = record?.mistakes?.length || 0;
-      
-      data.push({
-        date: dateString,
-        value: mistakeCount,
-      });
-    }
-    
-    return data;
-  }, [dailyRecords]);
 
   const handleDeleteMistake = (id: string) => {
     Alert.alert(
@@ -176,14 +139,6 @@ const MistakesScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* Date Chart View */}
-        <DateChartView
-          title="Günlük Hata Sayısı"
-          data={chartData}
-          color={COLORS.status.error}
-          onDateChange={setSelectedDate}
-        />
-
         {/* Stats Card */}
         <View style={styles.statsCard}>
           <View style={styles.statsRow}>
@@ -222,34 +177,34 @@ const MistakesScreen: React.FC = () => {
               {mistakes.map((mistake) => (
                 <View key={mistake.id} style={styles.mistakeCard}>
                   <View style={styles.mistakeHeader}>
-                                         <View style={styles.mistakeTypeContainer}>
-                       <View style={styles.tagsRow}>
-                         <View style={[
-                           styles.typeTag,
-                           { backgroundColor: getMistakeTypeColor(mistake.type) + '20' }
-                         ]}>
-                           <Text style={[
-                             styles.typeText,
-                             TEXT_STYLES.caption,
-                             { color: getMistakeTypeColor(mistake.type) }
-                           ]}>
-                             {getMistakeTypeLabel(mistake.type)}
-                           </Text>
-                         </View>
-                         <View style={[
-                           styles.severityTag,
-                           { backgroundColor: getSeverityColor(mistake.severity) + '20' }
-                         ]}>
-                           <Text style={[
-                             styles.severityText,
-                             TEXT_STYLES.caption,
-                             { color: getSeverityColor(mistake.severity) }
-                           ]}>
-                             {mistake.severity}/5 - {getSeverityText(mistake.severity)}
-                           </Text>
-                         </View>
-                       </View>
-                     </View>
+                    <View style={styles.mistakeTypeContainer}>
+                      <View style={styles.tagsRow}>
+                        <View style={[
+                          styles.typeTag,
+                          { backgroundColor: getMistakeTypeColor(mistake.type) + '20' }
+                        ]}>
+                          <Text style={[
+                            styles.typeText,
+                            TEXT_STYLES.caption,
+                            { color: getMistakeTypeColor(mistake.type) }
+                          ]}>
+                            {getMistakeTypeLabel(mistake.type)}
+                          </Text>
+                        </View>
+                        <View style={[
+                          styles.severityTag,
+                          { backgroundColor: getSeverityColor(mistake.severity) + '20' }
+                        ]}>
+                          <Text style={[
+                            styles.severityText,
+                            TEXT_STYLES.caption,
+                            { color: getSeverityColor(mistake.severity) }
+                          ]}>
+                            {mistake.severity}/5 - {getSeverityText(mistake.severity)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
                     <View style={styles.mistakeActions}>
                       <TouchableOpacity
                         style={styles.actionButton}
@@ -280,23 +235,23 @@ const MistakesScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-             {/* Add Mistake Button */}
-       <TouchableOpacity
-         style={styles.addButton}
-         onPress={() => setShowAddModal(true)}
-       >
-         <Plus width={24} height={24} color={COLORS.text.inverse} />
-         <Text style={[styles.addButtonText, TEXT_STYLES.button]}>
-           Hata Ekle
-         </Text>
-       </TouchableOpacity>
+      {/* Add Mistake Button */}
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setShowAddModal(true)}
+      >
+        <Plus width={24} height={24} color={COLORS.text.inverse} />
+        <Text style={[styles.addButtonText, TEXT_STYLES.button]}>
+          Hata Ekle
+        </Text>
+      </TouchableOpacity>
 
-       {/* Add Mistake Modal */}
-       <AddMistakeModal
-         visible={showAddModal}
-         onClose={() => setShowAddModal(false)}
-         onAddMistake={handleAddMistake}
-       />
+      {/* Add Mistake Modal */}
+      <AddMistakeModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAddMistake={handleAddMistake}
+      />
 
       <Toast
         visible={showToast}

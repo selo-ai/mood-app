@@ -1,0 +1,136 @@
+import { Module } from '../types';
+
+export const DEFAULT_MODULES: Module[] = [
+  {
+    id: 'daily-routines',
+    name: 'daily-routines',
+    displayName: 'Günlük Rutinler',
+    icon: 'Home',
+    color: '#3B82F6',
+    isDefault: true,
+    isEnabled: true,
+    order: 0,
+    description: 'Günlük rutinlerinizi takip edin',
+    screenName: 'DailyRoutines'
+  },
+  {
+    id: 'tasks',
+    name: 'tasks',
+    displayName: 'Görevler',
+    icon: 'List',
+    color: '#10B981',
+    isDefault: true,
+    isEnabled: true,
+    order: 1,
+    description: 'Günlük görevlerinizi yönetin',
+    screenName: 'Tasks'
+  },
+  {
+    id: 'mistakes',
+    name: 'mistakes',
+    displayName: 'Hata Takibi',
+    icon: 'AlertTriangle',
+    color: '#EF4444',
+    isDefault: true,
+    isEnabled: true,
+    order: 2,
+    description: 'Hatalarınızı kaydedin ve öğrenin',
+    screenName: 'Mistakes'
+  },
+  {
+    id: 'health',
+    name: 'health',
+    displayName: 'Sağlık',
+    icon: 'Heart',
+    color: '#F59E0B',
+    isDefault: true,
+    isEnabled: true,
+    order: 3,
+    description: 'İlaç ve sağlık takibinizi yapın',
+    screenName: 'Medications'
+  },
+  {
+    id: 'notes',
+    name: 'notes',
+    displayName: 'Notlar',
+    icon: 'FileText',
+    color: '#8B5CF6',
+    isDefault: true,
+    isEnabled: true,
+    order: 4,
+    description: 'Metin ve sesli notlarınızı kaydedin',
+    screenName: 'Notes'
+  },
+  {
+    id: 'nutrition',
+    name: 'nutrition',
+    displayName: 'Beslenme',
+    icon: 'Coffee',
+    color: '#06B6D4',
+    isDefault: false,
+    isEnabled: false,
+    order: 5,
+    description: 'Su, kalori ve öğün takibinizi yapın',
+    screenName: 'Nutrition'
+  },
+  {
+    id: 'books',
+    name: 'books',
+    displayName: 'Kitap Oku',
+    icon: 'BookOpen',
+    color: '#6B7280',
+    isDefault: false,
+    isEnabled: false,
+    order: 6,
+    description: 'Kitap okuma ilerlemenizi takip edin',
+    screenName: 'Books'
+  },
+  {
+    id: 'prayer',
+    name: 'prayer',
+    displayName: 'İbadet',
+    icon: 'Moon',
+    color: '#1E40AF',
+    isDefault: false,
+    isEnabled: false,
+    order: 7,
+    description: 'Namaz ve ibadet takibinizi yapın',
+    screenName: 'Prayer'
+  },
+  {
+    id: 'shopping',
+    name: 'shopping',
+    displayName: 'Alışveriş',
+    icon: 'ShoppingBag',
+    color: '#8B5CF6',
+    isDefault: false,
+    isEnabled: false,
+    order: 8,
+    description: 'Alışveriş listelerinizi yönetin',
+    screenName: 'Shopping'
+  },
+  {
+    id: 'special-days',
+    name: 'special-days',
+    displayName: 'Özel Günler',
+    icon: 'Calendar',
+    color: '#F59E0B',
+    isDefault: false,
+    isEnabled: false,
+    order: 9,
+    description: 'Önemli günlerinizi takip edin',
+    screenName: 'SpecialDays'
+  },
+  {
+    id: 'pomodoro',
+    name: 'pomodoro',
+    displayName: 'Pomodoro',
+    icon: 'Clock',
+    color: '#DC2626',
+    isDefault: false,
+    isEnabled: false,
+    order: 10,
+    description: 'Odaklanma seanslarınızı yönetin',
+    screenName: 'Pomodoro'
+  }
+];
