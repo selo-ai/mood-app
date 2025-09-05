@@ -94,6 +94,9 @@ interface AppState {
   modules: Module[];
   moduleSettings: ModuleSettings;
   
+  // Hatırlatma Kartları
+  hiddenReminderCards: string[];
+  
   // Actions
   setUser: (user: User) => void;
   addCategory: (category: Category) => void;
@@ -124,6 +127,11 @@ interface AppState {
   getCurrentDailyRecord: () => DailyRecord;
   getDailyRecord: (date: string) => DailyRecord | null;
   getCurrentScore: () => number;
+  
+  // Hatırlatma kartları
+  hideReminderCard: (cardId: string) => void;
+  showReminderCard: (cardId: string) => void;
+  isReminderCardHidden: (cardId: string) => boolean;
   
   // Beslenme modülü action'ları
   addWater: (amount: number) => void;
@@ -355,6 +363,7 @@ export const useAppStore = create<AppState>()(
           moduleOrder: DEFAULT_MODULES.map(m => m.id),
           lastUpdate: new Date().toISOString()
         },
+        hiddenReminderCards: [],
 
       // User actions
       setUser: (user: User) => set({ user }),
@@ -1454,7 +1463,7 @@ export const useAppStore = create<AppState>()(
              const medication = state.medications.find(med => med.id === medicationId);
              if (medication) {
                const newDailyMedication: DailyMedication = {
-                 id: Date.now().toString(),
+                 id: currentDate + '_med_' + medicationId,
                  medicationId: medicationId,
                  name: medication.name,
                  isCompleted: true,
@@ -1507,7 +1516,7 @@ export const useAppStore = create<AppState>()(
              const supplement = state.supplements.find(supp => supp.id === supplementId);
              if (supplement) {
                const newDailySupplement: DailySupplement = {
-                 id: Date.now().toString(),
+                 id: currentDate + '_supp_' + supplementId,
                  supplementId: supplementId,
                  name: supplement.name,
                  isCompleted: true,
@@ -1538,23 +1547,41 @@ export const useAppStore = create<AppState>()(
            const state = get();
            const currentDate = state.currentDate;
            
-           if (!state.dailyHealthData[currentDate]) {
+           // Mevcut günlük veri var mı kontrol et
+           const existingData = state.dailyHealthData[currentDate];
+           
+           // Eğer günlük veri yoksa veya ilaç/takviye sayısı değişmişse güncelle
+           const needsUpdate = !existingData || 
+             existingData.medications.length !== state.medications.length ||
+             existingData.supplements.length !== state.supplements.length;
+           
+           if (needsUpdate) {
              // Mevcut ilaç ve takviyelerden günlük veri oluştur
-             const dailyMedications: DailyMedication[] = state.medications.map(med => ({
-               id: Date.now().toString() + '_' + med.id,
-               medicationId: med.id,
-               name: med.name,
-               isCompleted: false,
-               date: currentDate
-             }));
+             const dailyMedications: DailyMedication[] = state.medications.map(med => {
+               // Eğer mevcut veri varsa, tamamlanma durumunu koru
+               const existingMed = existingData?.medications.find(m => m.medicationId === med.id);
+               return {
+                 id: currentDate + '_med_' + med.id,
+                 medicationId: med.id,
+                 name: med.name,
+                 isCompleted: existingMed?.isCompleted || false,
+                 date: currentDate,
+                 completedAt: existingMed?.completedAt
+               };
+             });
              
-             const dailySupplements: DailySupplement[] = state.supplements.map(supp => ({
-               id: Date.now().toString() + '_' + supp.id,
-               supplementId: supp.id,
-               name: supp.name,
-               isCompleted: false,
-               date: currentDate
-             }));
+             const dailySupplements: DailySupplement[] = state.supplements.map(supp => {
+               // Eğer mevcut veri varsa, tamamlanma durumunu koru
+               const existingSupp = existingData?.supplements.find(s => s.supplementId === supp.id);
+               return {
+                 id: currentDate + '_supp_' + supp.id,
+                 supplementId: supp.id,
+                 name: supp.name,
+                 isCompleted: existingSupp?.isCompleted || false,
+                 date: currentDate,
+                 completedAt: existingSupp?.completedAt
+               };
+             });
              
              const newData: DailyHealthData = {
                date: currentDate,
@@ -1563,52 +1590,21 @@ export const useAppStore = create<AppState>()(
                lastUpdate: new Date().toISOString()
              };
              
-             // State'i güncelle
-             set(state => ({
-               dailyHealthData: {
-                 ...state.dailyHealthData,
-                 [currentDate]: newData
-               }
-             }));
+             // State'i güncelle (sadece gerektiğinde) - render döngüsünden sonra
+             setTimeout(() => {
+               set(state => ({
+                 dailyHealthData: {
+                   ...state.dailyHealthData,
+                   [currentDate]: newData
+                 }
+               }));
+             }, 0);
              
              return newData;
            }
            
-           // Günlük sıfırlama kontrolü - gece 00:00'dan sonra tüm işaretleri kaldır
-           const currentData = state.dailyHealthData[currentDate];
-           const now = new Date();
-           const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-           const lastUpdate = currentData.lastUpdate ? new Date(currentData.lastUpdate) : null;
-           
-           if (lastUpdate && lastUpdate < today) {
-             // Yeni gün başladı, tüm işaretleri sıfırla
-             const resetData: DailyHealthData = {
-               ...currentData,
-               medications: currentData.medications.map(med => ({
-                 ...med,
-                 isCompleted: false,
-                 completedAt: undefined,
-               })),
-               supplements: currentData.supplements.map(supp => ({
-                 ...supp,
-                 isCompleted: false,
-                 completedAt: undefined,
-               })),
-               lastUpdate: now.toISOString()
-             };
-             
-             // State'i güncelle
-             set(state => ({
-               dailyHealthData: {
-                 ...state.dailyHealthData,
-                 [currentDate]: resetData
-               }
-             }));
-             
-             return resetData;
-           }
-           
-           return currentData;
+           // Mevcut veriyi döndür
+           return existingData;
          },
 
          getDailyHealthData: (date: string) => {
@@ -1673,7 +1669,7 @@ export const useAppStore = create<AppState>()(
           },
 
           // Pomodoro modülü action'ları
-          startPomodoroSession: (type: 'work' | 'shortBreak' | 'longBreak') => {
+          startPomodoroSession: (type: 'work' | 'shortBreak' | 'longBreak', isCycle: boolean = false) => {
             const state = get();
             const settings = state.pomodoroSettings;
             
@@ -1697,6 +1693,7 @@ export const useAppStore = create<AppState>()(
               isCompleted: false,
               startTime: new Date(),
               createdAt: new Date(),
+              isCycle,
             };
 
             set({ activePomodoroSession: session });
@@ -1812,6 +1809,24 @@ export const useAppStore = create<AppState>()(
           getPomodoroData: (date: string) => {
             const state = get();
             return state.pomodoroData[date] || null;
+          },
+
+          // Hatırlatma kartları fonksiyonları
+          hideReminderCard: (cardId: string) => {
+            set(state => ({
+              hiddenReminderCards: [...state.hiddenReminderCards, cardId],
+            }));
+          },
+
+          showReminderCard: (cardId: string) => {
+            set(state => ({
+              hiddenReminderCards: state.hiddenReminderCards.filter(id => id !== cardId),
+            }));
+          },
+
+          isReminderCardHidden: (cardId: string) => {
+            const state = get();
+            return state.hiddenReminderCards.includes(cardId);
           },
     }),
     {

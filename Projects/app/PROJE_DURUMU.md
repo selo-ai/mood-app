@@ -188,6 +188,14 @@ SPACING = {
 - Bazı linter hataları (çözülebilir)
 - `specialDays` state tanımları eksik (çözülebilir)
 
+### **✅ Son Düzeltmeler (Bugün)**
+- **Dashboard Hatırlatma Kartları**: Veri kaynakları düzeltildi
+- **Rutinler**: `routines` veri kaynağından doğru sayı gösterimi
+- **İlaç/Takviyeler**: `getCurrentDailyHealthData()` fonksiyonu optimize edildi
+- **Infinite Loop**: State güncelleme döngüsü düzeltildi
+- **React Hataları**: Render sırasında state güncelleme hatası çözüldü
+- **Veri Senkronizasyonu**: Store ve günlük veriler arası senkronizasyon sağlandı
+
 ### **🚀 Gelecek Potansiyeli**
 - Modül ekleme/çıkarma sistemi
 - Bildirim sistemi

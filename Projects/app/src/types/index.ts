@@ -311,6 +311,7 @@ export interface PomodoroSession {
   startTime?: Date;
   endTime?: Date;
   createdAt: Date;
+  isCycle?: boolean; // Otomatik geçişli döngü seansı mı?
 }
 
 export interface PomodoroSettings {

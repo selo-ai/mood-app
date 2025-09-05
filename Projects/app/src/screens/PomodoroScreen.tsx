@@ -90,7 +90,7 @@ const PomodoroScreen: React.FC = () => {
       
       // Ses bittiğinde temizle
       sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
+        if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync();
         }
       });
@@ -111,8 +111,8 @@ const PomodoroScreen: React.FC = () => {
       setIsRunning(true);
     } else if (activePomodoroSession && activePomodoroSession.endTime) {
       // Duraklatılmış seans
-      const startTime = new Date(activePomodoroSession.startTime).getTime();
-      const endTime = new Date(activePomodoroSession.endTime).getTime();
+      const startTime = activePomodoroSession.startTime ? new Date(activePomodoroSession.startTime).getTime() : 0;
+      const endTime = activePomodoroSession.endTime ? new Date(activePomodoroSession.endTime).getTime() : 0;
       const elapsed = (endTime - startTime) / 1000 / 60; // dakika cinsinden (ondalıklı)
       const remaining = Math.max(0, activePomodoroSession.duration - elapsed);
 
@@ -155,9 +155,59 @@ const PomodoroScreen: React.FC = () => {
 
   const handleSessionComplete = () => {
     if (activePomodoroSession) {
+      const completedType = activePomodoroSession.type;
+      const isCycle = activePomodoroSession.isCycle;
       completePomodoroSession();
       playNotification('end');
-      setToastMessage(`${activePomodoroSession.type === 'work' ? 'Çalışma' : 'Mola'} seansı tamamlandı!`);
+      
+      // Otomatik geçiş sistemi sadece döngü seanslarında aktif
+      if (isCycle) {
+        setTimeout(() => {
+          let nextSessionType: 'work' | 'shortBreak' | 'longBreak';
+          let nextSessionMessage: string;
+          
+          if (completedType === 'work') {
+            // Çalışma seansı bittikten sonra
+            const currentData = getCurrentPomodoroData();
+            const completedPomodoros = currentData.completedPomodoros || 0;
+            
+            if (completedPomodoros % 4 === 0) {
+              // 4 çalışma seansından sonra uzun mola
+              nextSessionType = 'longBreak';
+              nextSessionMessage = 'Uzun mola başlıyor!';
+            } else {
+              // Normal kısa mola
+              nextSessionType = 'shortBreak';
+              nextSessionMessage = 'Kısa mola başlıyor!';
+            }
+          } else if (completedType === 'shortBreak' || completedType === 'longBreak') {
+            // Mola bittikten sonra çalışma seansı
+            nextSessionType = 'work';
+            nextSessionMessage = 'Çalışma seansı başlıyor!';
+          } else {
+            return; // Bilinmeyen seans tipi
+          }
+          
+          // Otomatik olarak bir sonraki seansı başlat (döngü devam ediyor)
+          (startPomodoroSession as any)(nextSessionType, true);
+          playNotification('start');
+          
+          // Toast mesajı göster
+          setToastMessage(nextSessionMessage);
+          setToastType('success');
+          setShowToast(true);
+          
+          // 3 saniye sonra otomatik geçiş bilgisi
+          setTimeout(() => {
+            setToastMessage(`Otomatik olarak ${nextSessionType === 'work' ? 'çalışma' : nextSessionType === 'shortBreak' ? 'kısa mola' : 'uzun mola'} seansına geçildi!`);
+            setToastType('success');
+            setShowToast(true);
+          }, 3000);
+          
+        }, 2000); // 2 saniye bekle, sonra otomatik geçiş
+      }
+      
+      setToastMessage(`${completedType === 'work' ? 'Çalışma' : 'Mola'} seansı tamamlandı!`);
       setToastType('success');
       setShowToast(true);
     }
@@ -183,6 +233,14 @@ const PomodoroScreen: React.FC = () => {
     startPomodoroSession('longBreak');
     playNotification('start');
     setToastMessage('Uzun mola başladı!');
+    setToastType('success');
+    setShowToast(true);
+  };
+
+  const handleStartWorkCycle = () => {
+    (startPomodoroSession as any)('work', true); // isCycle: true
+    playNotification('start');
+    setToastMessage('Çalışma döngüsü başladı! Otomatik geçişler aktif.');
     setToastType('success');
     setShowToast(true);
   };
@@ -297,7 +355,15 @@ const PomodoroScreen: React.FC = () => {
                  <View style={styles.durationControls}>
                    <TouchableOpacity
                      style={[styles.durationButton, { backgroundColor: COLORS.status.error + '30' }]}
-                     onPress={() => updatePomodoroSettings({ workDuration: Math.max(1, pomodoroSettings.workDuration - 5) })}
+                     onPress={() => {
+                       if (pomodoroSettings.workDuration <= 5) {
+                         setToastMessage('Alt limit 5 dakikadır!');
+                         setToastType('error');
+                         setShowToast(true);
+                       } else {
+                         updatePomodoroSettings({ workDuration: Math.max(5, pomodoroSettings.workDuration - 5) });
+                       }
+                     }}
                    >
                      <Text style={[styles.durationButtonText, { color: COLORS.status.error }]}>-</Text>
                    </TouchableOpacity>
@@ -330,7 +396,15 @@ const PomodoroScreen: React.FC = () => {
                  <View style={styles.durationControls}>
                    <TouchableOpacity
                      style={[styles.durationButton, { backgroundColor: COLORS.status.success + '30' }]}
-                     onPress={() => updatePomodoroSettings({ shortBreakDuration: Math.max(1, pomodoroSettings.shortBreakDuration - 1) })}
+                     onPress={() => {
+                       if (pomodoroSettings.shortBreakDuration <= 5) {
+                         setToastMessage('Alt limit 5 dakikadır!');
+                         setToastType('error');
+                         setShowToast(true);
+                       } else {
+                         updatePomodoroSettings({ shortBreakDuration: Math.max(5, pomodoroSettings.shortBreakDuration - 5) });
+                       }
+                     }}
                    >
                      <Text style={[styles.durationButtonText, { color: COLORS.status.success }]}>-</Text>
                    </TouchableOpacity>
@@ -339,7 +413,7 @@ const PomodoroScreen: React.FC = () => {
                    </Text>
                    <TouchableOpacity
                      style={[styles.durationButton, { backgroundColor: COLORS.status.success + '30' }]}
-                     onPress={() => updatePomodoroSettings({ shortBreakDuration: pomodoroSettings.shortBreakDuration + 1 })}
+                     onPress={() => updatePomodoroSettings({ shortBreakDuration: pomodoroSettings.shortBreakDuration + 5 })}
                    >
                      <Text style={[styles.durationButtonText, { color: COLORS.status.success }]}>+</Text>
                    </TouchableOpacity>
@@ -352,38 +426,73 @@ const PomodoroScreen: React.FC = () => {
                  </TouchableOpacity>
                </View>
                
-               {/* Long Break */}
-               <View style={[styles.sessionButton, { backgroundColor: COLORS.status.info + '20' }]}>
-                 <View style={styles.sessionButtonHeader}>
-                   <Coffee width={24} height={24} color={COLORS.status.info} />
-                   <Text style={[styles.sessionButtonText, { color: COLORS.status.info }]}>
-                     Uzun Mola
-                   </Text>
-                 </View>
-                 <View style={styles.durationControls}>
-                   <TouchableOpacity
-                     style={[styles.durationButton, { backgroundColor: COLORS.status.info + '30' }]}
-                     onPress={() => updatePomodoroSettings({ longBreakDuration: Math.max(1, pomodoroSettings.longBreakDuration - 5) })}
-                   >
-                     <Text style={[styles.durationButtonText, { color: COLORS.status.info }]}>-</Text>
-                   </TouchableOpacity>
-                   <Text style={[styles.durationText, { color: COLORS.status.info }]}>
-                     {pomodoroSettings.longBreakDuration}dk
-                   </Text>
-                   <TouchableOpacity
-                     style={[styles.durationButton, { backgroundColor: COLORS.status.info + '30' }]}
-                     onPress={() => updatePomodoroSettings({ longBreakDuration: pomodoroSettings.longBreakDuration + 5 })}
-                   >
-                     <Text style={[styles.durationButtonText, { color: COLORS.status.info }]}>+</Text>
-                   </TouchableOpacity>
-                 </View>
-                 <TouchableOpacity 
-                   style={styles.startButton}
-                   onPress={handleStartLongBreak}
-                 >
-                   <Text style={[styles.startButtonText, { color: COLORS.status.info }]}>Başlat</Text>
-                 </TouchableOpacity>
-               </View>
+                               {/* Long Break */}
+                <View style={[styles.sessionButton, { backgroundColor: COLORS.status.info + '20' }]}>
+                  <View style={styles.sessionButtonHeader}>
+                    <Coffee width={24} height={24} color={COLORS.status.info} />
+                    <Text style={[styles.sessionButtonText, { color: COLORS.status.info }]}>
+                      Uzun Mola
+                    </Text>
+                  </View>
+                  <View style={styles.durationControls}>
+                    <TouchableOpacity
+                      style={[styles.durationButton, { backgroundColor: COLORS.status.info + '30' }]}
+                      onPress={() => {
+                        if (pomodoroSettings.longBreakDuration <= 5) {
+                          setToastMessage('Alt limit 5 dakikadır!');
+                          setToastType('error');
+                          setShowToast(true);
+                        } else {
+                          updatePomodoroSettings({ longBreakDuration: Math.max(5, pomodoroSettings.longBreakDuration - 5) });
+                        }
+                      }}
+                    >
+                      <Text style={[styles.durationButtonText, { color: COLORS.status.info }]}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={[styles.durationText, { color: COLORS.status.info }]}>
+                      {pomodoroSettings.longBreakDuration}dk
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.durationButton, { backgroundColor: COLORS.status.info + '30' }]}
+                      onPress={() => updatePomodoroSettings({ longBreakDuration: pomodoroSettings.longBreakDuration + 5 })}
+                    >
+                      <Text style={[styles.durationButtonText, { color: COLORS.status.info }]}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.startButton}
+                    onPress={handleStartLongBreak}
+                  >
+                    <Text style={[styles.startButtonText, { color: COLORS.status.info }]}>Başlat</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Work Cycle Start */}
+                <View style={[styles.sessionButton, { backgroundColor: COLORS.primary[500] + '20' }]}>
+                  <View style={styles.sessionButtonHeader}>
+                    <Target width={24} height={24} color={COLORS.primary[500]} />
+                    <Text style={[styles.sessionButtonText, { color: COLORS.primary[500] }]}>
+                      Çalışma Döngüsü
+                    </Text>
+                  </View>
+                  <View style={styles.cycleInfoContainer}>
+                    <Text style={[styles.cycleInfoText, { color: COLORS.primary[500] }]}>
+                      Otomatik geçişli pomodoro döngüsü
+                    </Text>
+                    <Text style={[styles.cycleInfoSubtext, { color: COLORS.primary[400] }]}>
+                      Çalışma → Kısa Mola → Çalışma → Kısa Mola → Çalışma → Kısa Mola → Çalışma → Uzun Mola
+                    </Text>
+                    <Text style={[styles.cycleWarningText, { color: COLORS.status.warning }]}>
+                      ⚠️ Üstteki süre ayarları geçerlidir
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.startButton, { backgroundColor: COLORS.primary[500] + '30' }]}
+                    onPress={handleStartWorkCycle}
+                  >
+                    <Text style={[styles.startButtonText, { color: COLORS.primary[500] }]}>Döngüyü Başlat</Text>
+                  </TouchableOpacity>
+                </View>
              </View>
           ) : (
             // Active Session Controls
@@ -644,10 +753,31 @@ const styles = StyleSheet.create({
      alignItems: 'center',
      justifyContent: 'space-between',
    },
-   soundSettingLabel: {
-     color: COLORS.text.primary,
-     fontWeight: '500',
-   },
+       soundSettingLabel: {
+      color: COLORS.text.primary,
+      fontWeight: '500',
+    },
+    cycleInfoContainer: {
+      marginBottom: SPACING.md,
+      alignItems: 'center',
+    },
+    cycleInfoText: {
+      fontWeight: '600',
+      fontSize: 14,
+      textAlign: 'center',
+      marginBottom: SPACING.xs,
+    },
+    cycleInfoSubtext: {
+      fontSize: 12,
+      textAlign: 'center',
+      lineHeight: 16,
+    },
+    cycleWarningText: {
+      fontSize: 12,
+      textAlign: 'center',
+      marginTop: SPACING.xs,
+      fontWeight: '500',
+    },
   
 });
 

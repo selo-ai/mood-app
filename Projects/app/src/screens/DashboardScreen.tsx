@@ -47,7 +47,11 @@ const DashboardScreen: React.FC = () => {
     addMistake, 
     addMoodEntry, 
     getCurrentDailyRecord,
-    getEnabledModules 
+    getEnabledModules,
+    routines,
+    getCurrentDailyHealthData,
+    dailyHealthData,
+    currentDate
   } = useAppStore();
   
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -56,11 +60,25 @@ const DashboardScreen: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [hiddenCards, setHiddenCards] = useState<string[]>([]);
 
   const currentRecord = getCurrentDailyRecord();
   const tasks = currentRecord.tasks;
   const mistakes = currentRecord.mistakes;
   const moods = currentRecord.moodEntries;
+  const currentHealthData = getCurrentDailyHealthData();
+  const medications = currentHealthData.medications || [];
+  const supplements = currentHealthData.supplements || [];
+  
+  
+
+  const hideCard = (cardId: string) => {
+    setHiddenCards(prev => [...prev, cardId]);
+  };
+
+  const isCardHidden = (cardId: string) => {
+    return hiddenCards.includes(cardId);
+  };
 
   const handleAddTask = (taskData: { title: string; description: string; category: string; priority: string; duration: string }) => {
     const newTask = {
@@ -206,6 +224,70 @@ const DashboardScreen: React.FC = () => {
             <Text style={[styles.statNumber, TEXT_STYLES.stat]}>0dk</Text>
             <Text style={[styles.statLabel, TEXT_STYLES.caption]}>Odaklanma</Text>
           </View>
+        </View>
+
+        {/* Daily Reminder Cards */}
+        <View style={styles.reminderCards}>
+          
+          {/* Daily Routines Reminder */}
+          {!isCardHidden('daily-routines') && (
+            <View style={[styles.reminderCard, { backgroundColor: COLORS.primary[200] }]}>
+              <View style={styles.reminderContent}>
+                <View style={styles.reminderIconContainer}>
+                  <Home width={20} height={20} color={COLORS.primary[700]} />
+                </View>
+                <Text style={[styles.reminderText, { color: COLORS.primary[800] }]}>
+                  Günlük Rutinler {routines.filter(r => r.completed).length}/{routines.length}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.reminderCloseButton}
+                onPress={() => hideCard('daily-routines')}
+              >
+                <XCircle width={16} height={16} color={COLORS.primary[700]} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Tasks Reminder */}
+          {!isCardHidden('tasks') && (
+            <View style={[styles.reminderCard, { backgroundColor: COLORS.status.success + '40' }]}>
+              <View style={styles.reminderContent}>
+                <View style={styles.reminderIconContainer}>
+                  <List width={20} height={20} color={COLORS.status.success} />
+                </View>
+                <Text style={[styles.reminderText, { color: COLORS.status.success }]}>
+                  Görevler {tasks.filter(t => t.completed).length}/{tasks.length}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.reminderCloseButton}
+                onPress={() => hideCard('tasks')}
+              >
+                <XCircle width={16} height={16} color={COLORS.status.success} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Medications Reminder */}
+          {!isCardHidden('medications') && (
+            <View style={[styles.reminderCard, { backgroundColor: COLORS.status.warning + '40' }]}>
+              <View style={styles.reminderContent}>
+                <View style={styles.reminderIconContainer}>
+                  <Heart width={20} height={20} color={COLORS.status.warning} />
+                </View>
+                <Text style={[styles.reminderText, { color: COLORS.status.warning }]}>
+                  İlaç - Takviyeler {(medications.filter(m => m.isCompleted).length + supplements.filter(s => s.isCompleted).length)}/{(medications.length + supplements.length)}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.reminderCloseButton}
+                onPress={() => hideCard('medications')}
+              >
+                <XCircle width={16} height={16} color={COLORS.status.warning} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Quick Actions */}
@@ -437,6 +519,36 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     zIndex: 1000,
+  },
+  reminderCards: {
+    marginBottom: SPACING.lg,
+  },
+  reminderCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    marginBottom: SPACING.md,
+    shadowColor: COLORS.shadow.light,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  reminderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reminderIconContainer: {
+    marginRight: SPACING.sm,
+  },
+  reminderText: {
+    fontSize: TEXT_STYLES.body.fontSize,
+    fontWeight: TEXT_STYLES.body.fontWeight,
+  },
+  reminderCloseButton: {
+    padding: SPACING.xs,
   },
 });
 
