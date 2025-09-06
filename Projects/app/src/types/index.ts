@@ -332,4 +332,5 @@ export interface PomodoroData {
   totalWorkTime: number; // dakika
   totalBreakTime: number; // dakika
   lastUpdate: string;
-} 
+}
+

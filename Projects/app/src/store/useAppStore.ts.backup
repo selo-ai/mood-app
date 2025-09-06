@@ -34,7 +34,10 @@ import {
   ModuleSettings,
   PomodoroData,
   PomodoroSettings,
-  PomodoroSession
+  PomodoroSession,
+  DailyStats,
+  WeeklyStats,
+  MonthlyStats
 } from '../types';
 import { calculateDailyScore } from '../utils/scoreCalculator';
 import { DEFAULT_CATEGORIES } from '../constants/categories';
@@ -94,6 +97,9 @@ interface AppState {
   modules: Module[];
   moduleSettings: ModuleSettings;
   
+  // İstatistik Sistemi
+  dailyStats: Record<string, DailyStats>;
+  
   // Hatırlatma Kartları
   hiddenReminderCards: string[];
   
@@ -132,6 +138,13 @@ interface AppState {
   hideReminderCard: (cardId: string) => void;
   showReminderCard: (cardId: string) => void;
   isReminderCardHidden: (cardId: string) => boolean;
+  
+  // İstatistik sistemi
+  generateDailyStats: (date?: string) => DailyStats;
+  getDailyStats: (date: string) => DailyStats | null;
+  getWeeklyStats: (weekStart: string) => WeeklyStats;
+  getMonthlyStats: (month: string) => MonthlyStats;
+  getAllDailyStats: () => DailyStats[];
   
   // Beslenme modülü action'ları
   addWater: (amount: number) => void;
@@ -330,17 +343,17 @@ export const useAppStore = create<AppState>()(
       activeCategories: DEFAULT_CATEGORIES,
       currentDate: getTodayString(),
       dailyRecords: {},
-              dailyRoutines: [],
-        activeFocusSession: null,
+      dailyRoutines: [],
+      activeFocusSession: null,
         activePomodoroSession: null,
-             nutritionData: {},
-       nutritionSettings: DEFAULT_NUTRITION_SETTINGS,
-       notes: [],
-       books: [],
-       medications: [],
-       appointments: [],
-               supplements: [],
-        routines: [],
+      nutritionData: {},
+      nutritionSettings: DEFAULT_NUTRITION_SETTINGS,
+      notes: [],
+      books: [],
+      medications: [],
+      appointments: [],
+      supplements: [],
+      routines: [],
         prayerData: {},
         shoppingLists: [],
         specialDays: [],
@@ -362,6 +375,7 @@ export const useAppStore = create<AppState>()(
           moduleOrder: DEFAULT_MODULES.map(m => m.id),
           lastUpdate: new Date().toISOString()
         },
+        dailyStats: {},
         hiddenReminderCards: [],
 
       // User actions
@@ -691,15 +705,15 @@ export const useAppStore = create<AppState>()(
 
           // Normal toggle işlemi
           return {
-            dailyRoutines: state.dailyRoutines.map(routine =>
-              routine.id === routineId 
+          dailyRoutines: state.dailyRoutines.map(routine =>
+            routine.id === routineId 
                 ? { 
                     ...routine, 
                     completed: !routine.completed,
                     lastUpdate: now.toISOString()
                   }
-                : routine
-            )
+              : routine
+          )
           };
         });
       },
@@ -846,23 +860,23 @@ export const useAppStore = create<AppState>()(
         }));
       },
 
-             getCurrentNutritionData: () => {
-         const state = get();
-         const currentData = state.nutritionData[state.currentDate];
-         
-         if (!currentData) {
-           const newData = createEmptyNutritionData(state.currentDate);
+      getCurrentNutritionData: () => {
+        const state = get();
+        const currentData = state.nutritionData[state.currentDate];
+        
+        if (!currentData) {
+          const newData = createEmptyNutritionData(state.currentDate);
            // setState'i render sırasında çağırmamak için setTimeout kullan
            setTimeout(() => {
-             set(state => ({
-               nutritionData: {
-                 ...state.nutritionData,
-                 [state.currentDate]: newData,
-               },
-             }));
+          set(state => ({
+            nutritionData: {
+              ...state.nutritionData,
+              [state.currentDate]: newData,
+            },
+          }));
            }, 0);
-           return newData;
-         }
+          return newData;
+        }
          
          // Günlük sıfırlama kontrolü - gece 00:00'dan sonra tüm işaretleri kaldır
          const now = new Date();
@@ -895,9 +909,9 @@ export const useAppStore = create<AppState>()(
            
            return resetData;
          }
-         
-         return currentData;
-       },
+        
+        return currentData;
+      },
 
       getNutritionData: (date: string) => {
         const state = get();
@@ -1124,7 +1138,7 @@ export const useAppStore = create<AppState>()(
             lastUpdate: new Date().toISOString(),
           };
 
-         set(state => ({
+        set(state => ({
            prayerData: {
              ...state.prayerData,
              [state.currentDate]: updatedData,
@@ -1288,9 +1302,9 @@ export const useAppStore = create<AppState>()(
               list.id === listId 
                 ? { ...list, ...updates, updatedAt: new Date() }
                 : list
-            )
-          }));
-        },
+          )
+        }));
+      },
 
         deleteShoppingList: (listId: string) => {
           set(state => ({
@@ -1374,7 +1388,7 @@ export const useAppStore = create<AppState>()(
         },
 
                  getShoppingList: (listId: string) => {
-           const state = get();
+        const state = get();
            return state.shoppingLists.find(list => list.id === listId) || null;
          },
 
@@ -1817,7 +1831,7 @@ export const useAppStore = create<AppState>()(
           isReminderCardHidden: (cardId: string) => {
             const state = get();
             return state.hiddenReminderCards.includes(cardId);
-          },
+      },
     }),
     {
       name: 'my-mood-storage',
@@ -1833,8 +1847,8 @@ export const useAppStore = create<AppState>()(
         books: state.books,
         medications: state.medications,
         appointments: state.appointments,
-                           supplements: state.supplements,
-          routines: state.routines,
+        supplements: state.supplements,
+        routines: state.routines,
           prayerData: state.prayerData,
                     shoppingLists: state.shoppingLists,
           dailyHealthData: state.dailyHealthData,
@@ -1842,21 +1856,22 @@ export const useAppStore = create<AppState>()(
           pomodoroSettings: state.pomodoroSettings,
           modules: state.modules,
           moduleSettings: state.moduleSettings,
+          dailyStats: state.dailyStats,
       }),
-             onRehydrateStorage: () => (state) => {
-         if (state) {
-           // Tarih string'lerini Date objelerine çevir
-           state.notes = parseDates(state.notes);
-           state.books = parseDates(state.books);
-           state.medications = parseDates(state.medications);
-           state.appointments = parseDates(state.appointments);
-           state.supplements = parseDates(state.supplements);
-           state.routines = parseDates(state.routines);
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Tarih string'lerini Date objelerine çevir
+          state.notes = parseDates(state.notes);
+          state.books = parseDates(state.books);
+          state.medications = parseDates(state.medications);
+          state.appointments = parseDates(state.appointments);
+          state.supplements = parseDates(state.supplements);
+          state.routines = parseDates(state.routines);
            state.shoppingLists = parseDates(state.shoppingLists);
-           
-           // Daily records içindeki tarihleri de çevir
-           Object.keys(state.dailyRecords).forEach(date => {
-             state.dailyRecords[date] = parseDates(state.dailyRecords[date]);
+          
+          // Daily records içindeki tarihleri de çevir
+          Object.keys(state.dailyRecords).forEach(date => {
+            state.dailyRecords[date] = parseDates(state.dailyRecords[date]);
            });
            
            // Prayer data içindeki tarihleri de çevir
@@ -1873,8 +1888,265 @@ export const useAppStore = create<AppState>()(
             Object.keys(state.pomodoroData).forEach(date => {
               state.pomodoroData[date] = parseDates(state.pomodoroData[date]);
             });
-         }
-       },
+            
+            // Daily stats içindeki tarihleri de çevir
+            Object.keys(state.dailyStats).forEach(date => {
+              state.dailyStats[date] = parseDates(state.dailyStats[date]);
+          });
+        }
+      },
+      // İstatistik sistemi fonksiyonları
+      generateDailyStats: (date?: string) => {
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        const state = get();
+        
+        // Günlük verileri al
+        const dailyRecord = state.getDailyRecord(targetDate);
+        const dailyRoutines = state.dailyRoutines.filter(r => {
+          if (!r.lastUpdate) return false;
+          const routineDate = new Date(r.lastUpdate).toISOString().split('T')[0];
+          return routineDate === targetDate;
+        });
+        const currentHealthData = state.getCurrentDailyHealthData();
+        const pomodoroData = state.pomodoroData[targetDate];
+        
+        // Rutin istatistikleri
+        const routinesCompleted = dailyRoutines.filter(r => r.completed).length;
+        const routinesTotal = dailyRoutines.length;
+        const routinesPercentage = routinesTotal > 0 ? Math.round((routinesCompleted / routinesTotal) * 100) : 0;
+        
+        // Görev istatistikleri
+        const tasksCompleted = dailyRecord.tasks.filter(t => t.completed).length;
+        const tasksTotal = dailyRecord.tasks.length;
+        const tasksPercentage = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
+        
+        // İlaç istatistikleri
+        const medicationsCompleted = (currentHealthData.medications?.filter(m => m.isCompleted).length || 0) + 
+                                   (currentHealthData.supplements?.filter(s => s.isCompleted).length || 0);
+        const medicationsTotal = (currentHealthData.medications?.length || 0) + 
+                                (currentHealthData.supplements?.length || 0);
+        const medicationsPercentage = medicationsTotal > 0 ? Math.round((medicationsCompleted / medicationsTotal) * 100) : 0;
+        
+        // Mood istatistikleri
+        const moodEntries = dailyRecord.moodEntries;
+        const moodAverage = moodEntries.length > 0 ? 
+          Math.round(moodEntries.reduce((sum, entry) => sum + entry.score, 0) / moodEntries.length) : 0;
+        
+        // Focus time
+        const focusTime = pomodoroData ? pomodoroData.totalWorkTime : 0;
+        
+        // Genel skor hesaplama
+        const overallScore = Math.round(
+          (routinesPercentage * 0.3) + 
+          (tasksPercentage * 0.3) + 
+          (medicationsPercentage * 0.2) + 
+          (moodAverage * 0.1) + 
+          (Math.max(0, 100 - dailyRecord.mistakes.length * 10) * 0.1)
+        );
+        
+        const dailyStats: DailyStats = {
+          date: targetDate,
+          routines: {
+            completed: routinesCompleted,
+            total: routinesTotal,
+            percentage: routinesPercentage
+          },
+          tasks: {
+            completed: tasksCompleted,
+            total: tasksTotal,
+            percentage: tasksPercentage
+          },
+          medications: {
+            completed: medicationsCompleted,
+            total: medicationsTotal,
+            percentage: medicationsPercentage
+          },
+          mood: {
+            average: moodAverage,
+            entries: moodEntries.length
+          },
+          mistakes: dailyRecord.mistakes.length,
+          focusTime: focusTime,
+          overallScore: Math.max(0, Math.min(100, overallScore)),
+          createdAt: new Date().toISOString()
+        };
+        
+        // Store'a kaydet
+        set(state => ({
+          dailyStats: {
+            ...state.dailyStats,
+            [targetDate]: dailyStats
+          }
+        }));
+        
+        return dailyStats;
+      },
+
+      getDailyStats: (date: string) => {
+        const state = get();
+        return state.dailyStats[date] || null;
+      },
+
+      getWeeklyStats: (weekStart: string) => {
+        const state = get();
+        const weekStartDate = new Date(weekStart);
+        const dailyStats: DailyStats[] = [];
+        
+        // 7 günlük veriyi topla
+        for (let i = 0; i < 7; i++) {
+          const currentDate = new Date(weekStartDate);
+          currentDate.setDate(weekStartDate.getDate() + i);
+          const dateString = currentDate.toISOString().split('T')[0];
+          const dayStats = state.dailyStats[dateString];
+          if (dayStats) {
+            dailyStats.push(dayStats);
+          }
+        }
+        
+        if (dailyStats.length === 0) {
+          return {
+            weekStart,
+            dailyStats: [],
+            averageScore: 0,
+            totalFocusTime: 0,
+            totalMistakes: 0,
+            consistency: 0
+          };
+        }
+        
+        const averageScore = Math.round(
+          dailyStats.reduce((sum, stats) => sum + stats.overallScore, 0) / dailyStats.length
+        );
+        const totalFocusTime = dailyStats.reduce((sum, stats) => sum + stats.focusTime, 0);
+        const totalMistakes = dailyStats.reduce((sum, stats) => sum + stats.mistakes, 0);
+        
+        // Tutarlılık hesaplama (günlük skorların standart sapması)
+        const scores = dailyStats.map(stats => stats.overallScore);
+        const mean = averageScore;
+        const variance = scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / scores.length;
+        const consistency = Math.max(0, 100 - Math.sqrt(variance));
+        
+        return {
+          weekStart,
+          dailyStats,
+          averageScore,
+          totalFocusTime,
+          totalMistakes,
+          consistency: Math.round(consistency)
+        };
+      },
+
+      getMonthlyStats: (month: string) => {
+        const state = get();
+        const dailyStats: DailyStats[] = [];
+        
+        // Ay içindeki tüm günleri bul
+        Object.keys(state.dailyStats).forEach(date => {
+          if (date.startsWith(month)) {
+            dailyStats.push(state.dailyStats[date]);
+          }
+        });
+        
+        if (dailyStats.length === 0) {
+          return {
+            month,
+            dailyStats: [],
+            averageScore: 0,
+            totalFocusTime: 0,
+            totalMistakes: 0,
+            bestDay: null,
+            worstDay: null,
+            improvement: 0
+          };
+        }
+        
+        const averageScore = Math.round(
+          dailyStats.reduce((sum, stats) => sum + stats.overallScore, 0) / dailyStats.length
+        );
+        const totalFocusTime = dailyStats.reduce((sum, stats) => sum + stats.focusTime, 0);
+        const totalMistakes = dailyStats.reduce((sum, stats) => sum + stats.mistakes, 0);
+        
+        const bestDay = dailyStats.reduce((best, current) => 
+          current.overallScore > best.overallScore ? current : best
+        );
+        const worstDay = dailyStats.reduce((worst, current) => 
+          current.overallScore < worst.overallScore ? current : worst
+        );
+        
+        // Önceki ay ile karşılaştırma (basit implementasyon)
+        const improvement = 0; // İleride implement edilecek
+        
+        return {
+          month,
+          dailyStats,
+          averageScore,
+          totalFocusTime,
+          totalMistakes,
+          bestDay,
+          worstDay,
+          improvement
+        };
+      },
+
+      getAllDailyStats: () => {
+        const state = get();
+        return Object.values(state.dailyStats).sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+      },
     }
-  )
+  ),
+  {
+    name: 'my-mood-storage',
+    storage: createJSONStorage(() => AsyncStorage),
+    partialize: (state) => ({
+      user: state.user,
+      activeCategories: state.activeCategories,
+      dailyRecords: state.dailyRecords,
+      dailyRoutines: state.dailyRoutines,
+      nutritionData: state.nutritionData,
+      nutritionSettings: state.nutritionSettings,
+      notes: state.notes,
+      books: state.books,
+      medications: state.medications,
+      appointments: state.appointments,
+      supplements: state.supplements,
+      routines: state.routines,
+      prayerData: state.prayerData,
+      shoppingLists: state.shoppingLists,
+      dailyHealthData: state.dailyHealthData,
+      pomodoroData: state.pomodoroData,
+      pomodoroSettings: state.pomodoroSettings,
+      modules: state.modules,
+      moduleSettings: state.moduleSettings,
+      dailyStats: state.dailyStats,
+    }),
+    onRehydrateStorage: () => (state) => {
+      if (state) {
+        // Tarih string'lerini Date objelerine çevir
+        state.notes = parseDates(state.notes);
+        state.books = parseDates(state.books);
+        state.medications = parseDates(state.medications);
+        state.appointments = parseDates(state.appointments);
+        state.supplements = parseDates(state.supplements);
+        state.routines = parseDates(state.routines);
+        state.shoppingLists = parseDates(state.shoppingLists);
+
+        // Daily health data içindeki tarihleri de çevir
+        Object.keys(state.dailyHealthData).forEach(date => {
+          state.dailyHealthData[date] = parseDates(state.dailyHealthData[date]);
+        });
+        
+        // Pomodoro data içindeki tarihleri de çevir
+        Object.keys(state.pomodoroData).forEach(date => {
+          state.pomodoroData[date] = parseDates(state.pomodoroData[date]);
+        });
+        
+        // Daily stats içindeki tarihleri de çevir
+        Object.keys(state.dailyStats).forEach(date => {
+          state.dailyStats[date] = parseDates(state.dailyStats[date]);
+        });
+       }
+     },
+  }
 ); 

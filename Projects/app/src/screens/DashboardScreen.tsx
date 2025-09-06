@@ -35,7 +35,7 @@ import {
   Moon,
   ShoppingBag,
   Calendar,
-  Settings
+  Settings,
 } from 'react-native-feather';
 
 type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
@@ -48,7 +48,7 @@ const DashboardScreen: React.FC = () => {
     addMoodEntry, 
     getCurrentDailyRecord,
     getEnabledModules,
-    routines,
+    dailyRoutines,
     getCurrentDailyHealthData,
     dailyHealthData,
     currentDate
@@ -168,6 +168,8 @@ const DashboardScreen: React.FC = () => {
       navigation.navigate('SpecialDays');
     } else if (categoryId === 'Pomodoro') {
       navigation.navigate('Pomodoro');
+    } else if (categoryId === 'İstatistikler') {
+      navigation.navigate('Statistics');
     } else if (categoryId === 'Modül Ekle') {
       navigation.navigate('ModuleManagement');
     } else {
@@ -231,62 +233,83 @@ const DashboardScreen: React.FC = () => {
           
           {/* Daily Routines Reminder */}
           {!isCardHidden('daily-routines') && (
-            <View style={[styles.reminderCard, { backgroundColor: COLORS.primary[200] }]}>
+            <TouchableOpacity 
+              style={[styles.reminderCard, { backgroundColor: COLORS.primary[200] }]}
+              onPress={() => navigation.navigate('DailyRoutines')}
+              activeOpacity={0.7}
+            >
               <View style={styles.reminderContent}>
                 <View style={styles.reminderIconContainer}>
                   <Home width={20} height={20} color={COLORS.primary[700]} />
                 </View>
                 <Text style={[styles.reminderText, { color: COLORS.primary[800] }]}>
-                  Günlük Rutinler {routines.filter(r => r.completed).length}/{routines.length}
+                  Günlük Rutinler {dailyRoutines.filter(r => r.completed).length}/{dailyRoutines.length}
                 </Text>
               </View>
               <TouchableOpacity 
                 style={styles.reminderCloseButton}
-                onPress={() => hideCard('daily-routines')}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  hideCard('daily-routines');
+                }}
               >
                 <XCircle width={16} height={16} color={COLORS.primary[700]} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Tasks Reminder */}
           {!isCardHidden('tasks') && (
-            <View style={[styles.reminderCard, { backgroundColor: COLORS.status.success + '40' }]}>
+            <TouchableOpacity 
+              style={[styles.reminderCard, { backgroundColor: COLORS.status.success + '80' }]}
+              onPress={() => navigation.navigate('Tasks')}
+              activeOpacity={0.7}
+            >
               <View style={styles.reminderContent}>
                 <View style={styles.reminderIconContainer}>
-                  <List width={20} height={20} color={COLORS.status.success} />
+                  <List width={20} height={20} color={COLORS.primary[800]} />
                 </View>
-                <Text style={[styles.reminderText, { color: COLORS.status.success }]}>
+                <Text style={[styles.reminderText, { color: COLORS.primary[800] }]}>
                   Görevler {tasks.filter(t => t.completed).length}/{tasks.length}
                 </Text>
               </View>
               <TouchableOpacity 
                 style={styles.reminderCloseButton}
-                onPress={() => hideCard('tasks')}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  hideCard('tasks');
+                }}
               >
-                <XCircle width={16} height={16} color={COLORS.status.success} />
+                <XCircle width={16} height={16} color={COLORS.primary[800]} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Medications Reminder */}
           {!isCardHidden('medications') && (
-            <View style={[styles.reminderCard, { backgroundColor: COLORS.status.warning + '40' }]}>
+            <TouchableOpacity 
+              style={[styles.reminderCard, { backgroundColor: COLORS.status.warning + '80' }]}
+              onPress={() => navigation.navigate('Medications')}
+              activeOpacity={0.7}
+            >
               <View style={styles.reminderContent}>
                 <View style={styles.reminderIconContainer}>
-                  <Heart width={20} height={20} color={COLORS.status.warning} />
+                  <Heart width={20} height={20} color={COLORS.primary[800]} />
                 </View>
-                <Text style={[styles.reminderText, { color: COLORS.status.warning }]}>
+                <Text style={[styles.reminderText, { color: COLORS.primary[800] }]}>
                   İlaç - Takviyeler {(medications.filter(m => m.isCompleted).length + supplements.filter(s => s.isCompleted).length)}/{(medications.length + supplements.length)}
                 </Text>
               </View>
               <TouchableOpacity 
                 style={styles.reminderCloseButton}
-                onPress={() => hideCard('medications')}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  hideCard('medications');
+                }}
               >
-                <XCircle width={16} height={16} color={COLORS.status.warning} />
+                <XCircle width={16} height={16} color={COLORS.primary[800]} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
 

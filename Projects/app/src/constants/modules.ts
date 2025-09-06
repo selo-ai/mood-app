@@ -132,5 +132,5 @@ export const DEFAULT_MODULES: Module[] = [
     order: 10,
     description: 'Odaklanma seanslarınızı yönetin',
     screenName: 'Pomodoro'
-  }
+  },
 ];

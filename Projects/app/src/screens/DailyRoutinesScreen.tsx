@@ -25,15 +25,15 @@ import {
 import { TEXT_STYLES, COLORS, SPACING, BORDER_RADIUS } from '../constants/typography';
 import { useAppStore } from '../store/useAppStore';
 import Toast from '../components/Toast';
-import { Routine } from '../types';
+import { DailyRoutine } from '../types';
 
 type DailyRoutinesScreenNavigationProp = StackNavigationProp<RootStackParamList, 'DailyRoutines'>;
 
 const DailyRoutinesScreen: React.FC = () => {
   const navigation = useNavigation<DailyRoutinesScreenNavigationProp>();
-  const { routines, addRoutine, updateRoutine, deleteRoutine, toggleRoutineCompletion } = useAppStore();
+  const { dailyRoutines, addDailyRoutine, updateDailyRoutine, deleteDailyRoutine, toggleRoutineCompletion } = useAppStore();
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+  const [editingRoutine, setEditingRoutine] = useState<DailyRoutine | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
@@ -47,14 +47,14 @@ const DailyRoutinesScreen: React.FC = () => {
       return;
     }
 
-    const newRoutine: Routine = {
+    const newRoutine: DailyRoutine = {
       id: Date.now().toString(),
       title: routineTitle.trim(),
       completed: false,
       createdAt: new Date(),
     };
 
-    addRoutine(newRoutine);
+    addDailyRoutine(newRoutine);
     setRoutineTitle('');
     setShowAddModal(false);
     setToastMessage('Rutin başarıyla eklendi!');
@@ -70,7 +70,7 @@ const DailyRoutinesScreen: React.FC = () => {
       return;
     }
 
-    updateRoutine(editingRoutine.id, { title: routineTitle.trim() });
+    updateDailyRoutine(editingRoutine.id, { title: routineTitle.trim() });
     setRoutineTitle('');
     setEditingRoutine(null);
     setShowAddModal(false);
@@ -89,7 +89,7 @@ const DailyRoutinesScreen: React.FC = () => {
           text: 'Sil',
           style: 'destructive',
           onPress: () => {
-            deleteRoutine(id);
+            deleteDailyRoutine(id);
             setToastMessage('Rutin başarıyla silindi!');
             setToastType('success');
             setShowToast(true);
@@ -103,7 +103,7 @@ const DailyRoutinesScreen: React.FC = () => {
     toggleRoutineCompletion(id);
   };
 
-  const handleEditPress = (routine: Routine) => {
+  const handleEditPress = (routine: DailyRoutine) => {
     setEditingRoutine(routine);
     setRoutineTitle(routine.title);
     setShowAddModal(true);
@@ -115,8 +115,8 @@ const DailyRoutinesScreen: React.FC = () => {
     setShowAddModal(true);
   };
 
-  const completedCount = routines.filter(r => r.completed).length;
-  const totalCount = routines.length;
+  const completedCount = dailyRoutines.filter(r => r.completed).length;
+  const totalCount = dailyRoutines.length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -173,7 +173,7 @@ const DailyRoutinesScreen: React.FC = () => {
         <View style={styles.routinesContainer}>
           <Text style={[styles.sectionTitle, TEXT_STYLES.h3]}>Rutinlerim</Text>
           
-          {routines.length === 0 ? (
+          {dailyRoutines.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={[styles.emptyText, TEXT_STYLES.body]}>
                 Henüz rutin eklenmemiş. İlk rutinini ekleyerek başla!
@@ -181,7 +181,7 @@ const DailyRoutinesScreen: React.FC = () => {
             </View>
           ) : (
             <View style={styles.routinesList}>
-              {routines.map((routine) => (
+              {dailyRoutines.map((routine) => (
                 <View key={routine.id} style={styles.routineCard}>
                   <TouchableOpacity
                     style={styles.routineContent}
